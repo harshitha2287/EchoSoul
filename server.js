@@ -1,78 +1,70 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
+const OpenAI = require("openai");
+
 const app = express();
+
+// ✅ Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
-const express = require("express");
 
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// ✅ OpenAI setup
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
-process.env.PORT
 
-//TEST ROUTE
+// ✅ Serve frontend
 app.get("/", (req, res) => {
-  res.send("Nova is alive 💖");
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-//CHATBOT ROUTE
+// ✅ Test route
+app.get("/api/test", (req, res) => {
+  res.send("EchoSoul backend is working 🚀");
+});
+
+// ✅ Nova Chatbot Route
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
 
   console.log("User:", userMessage);
 
   try {
-    const ollamaRes = await fetch("http://127.0.0.1:11434/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "phi:latest",
-        prompt: `
-You are Nova, a friendly, warm, emotionally supportive AI friend.
-Always reply clearly, like a human conversation.
-Never leave the response empty.
-
-User: ${userMessage}
-Nova:
-`,
-        stream: false,
-        options: {
-          num_predict: 60
-        }
-      }),
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Nova, a warm, emotionally supportive AI friend. Speak kindly, naturally, and help users feel heard and calm.",
+        },
+        {
+          role: "user",
+          content: userMessage,
+        },
+      ],
     });
 
-    const data = await ollamaRes.json();
-
-    console.log("FULL OLLAMA DATA:", data);
-
-    let reply = data.response;
-
-    if (!reply || reply.trim() === "") {
-      reply = "Hey… I'm here 🌸 Tell me what's on your mind.";
-    }
-
-    reply = reply.trim();
+    const reply = response.choices[0].message.content;
 
     res.json({ reply });
 
   } catch (err) {
-    console.log("ERROR:", err);
+    console.error("OpenAI Error:", err);
 
     res.json({
-      reply: "Nova is having trouble thinking right now 💭",
+      reply: "Nova is having trouble thinking right now 💭 Please try again.",
     });
   }
 });
-//START SERVER
-app.listen(3000, () => {
-  console.log("Server running at http://localhost:3000");
-});
-app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/index.html");
+
+// ✅ Start server (ONLY ONCE)
+const PORT = process.env.PORT || 10000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
