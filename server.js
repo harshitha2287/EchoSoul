@@ -3,7 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const OpenAI = require("openai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
 
@@ -12,10 +12,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-// ✅ OpenAI setup
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// ✅ Gemini setup
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // ✅ Serve frontend
 app.get("/", (req, res) => {
@@ -27,34 +26,27 @@ app.get("/api/test", (req, res) => {
   res.send("EchoSoul backend is working 🚀");
 });
 
-// ✅ Nova Chatbot Route
+// ✅ Nova Chatbot (Gemini)
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
 
   console.log("User:", userMessage);
 
   try {
-    const response = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are Nova, a warm, emotionally supportive AI friend. Speak kindly, naturally, and help users feel heard and calm.",
-        },
-        {
-          role: "user",
-          content: userMessage,
-        },
-      ],
-    });
+    const result = await model.generateContent(`
+You are Nova, a warm, emotionally supportive AI friend.
+Speak kindly, naturally, and help the user feel calm and heard.
 
-    const reply = response.choices[0].message.content;
+User: ${userMessage}
+Nova:
+    `);
+
+    const reply = result.response.text();
 
     res.json({ reply });
 
   } catch (err) {
-    console.error("OpenAI Error:", err);
+    console.error("Gemini Error:", err);
 
     res.json({
       reply: "Nova is having trouble thinking right now 💭 Please try again.",
@@ -62,7 +54,7 @@ app.post("/chat", async (req, res) => {
   }
 });
 
-// ✅ Start server (ONLY ONCE)
+// ✅ Start server
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
