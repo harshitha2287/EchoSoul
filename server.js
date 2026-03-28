@@ -14,7 +14,10 @@ app.use(express.static("public"));
 
 // ✅ Gemini setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash-latest",
+});
 
 // ✅ Serve frontend
 app.get("/", (req, res) => {
@@ -48,13 +51,13 @@ Nova:
   } catch (err) {
     console.error("Gemini Error:", err);
 
-    res.json({
+    res.status(500).json({
       reply: "Nova is having trouble thinking right now 💭 Please try again.",
     });
   }
 });
 
-// ✅ Start server
+// ✅ Start server (Render-compatible)
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
